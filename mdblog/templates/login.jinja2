@@ -1,0 +1,18 @@
+{% extends "_main.jinja2" %}
+{% block title %} Login {% endblock %}
+
+{% block main %}
+
+    <form action="{{ url_for('view_login') }}" method="post">
+        <p>
+            <label> username: </label>
+            <input type="text" name="username">
+        </p>
+        <p>
+            <label> password: </label>
+            <input type="password" name="password">
+        </p>
+    <input type="submit" value="login">
+    </form>
+
+{% endblock %}

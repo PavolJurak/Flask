@@ -1,0 +1,19 @@
+{% extends "_main.jinja2" %}
+{% block title %} About Page {% endblock %}
+
+{% block main %}
+
+<ul>
+    {% if articles %}
+        {% for id, article in articles.items() %}
+        <li>
+            <h2><a href="{{ url_for('view_article',art_id=id) }}">{{ article.title }}</a></h2>
+            <p>{{ article.content | truncate(100) }}</p>
+        </li>
+        {% endfor %}
+    {% else %}
+        <p>No articles :(</p>
+    {% endif %}
+</ul>
+
+{% endblock %}

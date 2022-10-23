@@ -1,0 +1,7 @@
+{% extends "_main.jinja2" %}
+{% block title %} Article {{ article.title }} {% endblock %}
+
+{% block main %}
+<h2>{{ article.title }}</h2>
+<p>{{ article.content }}</p>
+{% endblock %}
