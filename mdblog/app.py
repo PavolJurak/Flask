@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from flask import request, render_template
 from flask import request, redirect, url_for
-from flask import session
+from flask import session, flash
 from flask import g
 import sqlite3
 
@@ -62,8 +62,10 @@ def login_user():
     password = request.form["password"]
     if username == flask_app.config["USERNAME"] and password == flask_app.config["PASSWORD"]:
         session["logged"] = True
+        flash('You were successfully logged in','success')
         return redirect(url_for("view_admin"))
     else:
+        flash('Incorrect name or password information', 'alert')
         return redirect(url_for("view_login"))
 
 @flask_app.route("/logout/", methods=["POST"])
