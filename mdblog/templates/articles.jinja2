@@ -3,17 +3,22 @@
 
 {% block main %}
 
+{% if "logged" in session %}
+    <a href="{{ url_for("view_add_article") }}">add new article</a>
+{% endif %}
+
+
+{% if articles %}
 <ul>
-    {% if articles %}
-        {% for article in articles %}
-        <li>
-            <h2><a href="{{ url_for('view_article',art_id=article.id) }}">{{ article.title }}</a></h2>
-            <p>{{ article.content | truncate(100) }}</p>
-        </li>
-        {% endfor %}
-    {% else %}
-        <p>No articles :(</p>
-    {% endif %}
+    {% for article in articles %}
+    <li>
+        <h2><a href="{{ url_for('view_article',art_id=article.id) }}">{{ article.title }}</a></h2>
+        <p>{{ article.content | truncate(100) }}</p>
+    </li>
+    {% endfor %}
 </ul>
+{% else %}
+    <p>No articles :(</p>
+{% endif %}
 
 {% endblock %}
