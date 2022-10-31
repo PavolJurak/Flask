@@ -10,14 +10,17 @@ from wtforms import StringField, TextAreaField
 from wtforms import PasswordField
 from wtforms.validators import InputRequired
 
-import sqlite3
+from .models import db
+from .models import Article
 
 from .database import articles
 
 flask_app = Flask(__name__)
-flask_app.config.from_pyfile("..\\configs\\default.py")
+flask_app.config.from_pyfile("..\\configs\\development.py")
 flask_app.secret_key = b'4\xa1f8a\x04y:\xa9\xc19\xc67M4+\xb5\xb1\xb9S\x92@\xf8\x97'
 DATABASE = os.path.join(os.getcwd(),'blog.db')
+
+db.init_app(flask_app)
 
 ## FORMS
 class LoginForm(FlaskForm):
@@ -41,9 +44,7 @@ def view_about():
 ## ARTICLES
 @flask_app.route("/articles/", methods=["GET"])
 def view_articles():
-    db = get_db()
-    cur = db.execute("SELECT * FROM articles ORDER BY id")
-    articles = cur.fetchall()
+    articles = Article.query.order_by(Article.id.desc())
     return render_template("articles.jinja2", articles=articles)
 
 @flask_app.route("/articles/new/", methods=["GET"])
@@ -59,18 +60,23 @@ def add_article():
     if "logged" not in session:
         return redirect(url_for("view_login"))
 
-    db = get_db()
-    db.execute("INSERT INTO articles (title, content) values (?,?)",[
-        request.form.get("title"), request.form.get("content")
-    ])
-    db.commit()
-    return redirect(url_for("view_articles"))
+    add_form = ArticleForm(request.form)
+    if add_form.validate():
+        new_article = Article(
+            title = add_form.title.data,
+            content = add_form.content.data )
+        db.session.add(new_article)
+        db.session.commit()
+        flash("Article was saved","success")
+        return redirect(url_for("view_articles"))
+    else:
+        for error in add_form.errors:
+            flash("{} is missing".format(error, "alert"))
+        return render_template("article_editor.jinja2", form=add_form)
 
 @flask_app.route("/articles/<int:art_id>")
 def view_article(art_id):
-    db = get_db()
-    cur = db.execute("SELECT * FROM articles WHERE id=(?)",[art_id])
-    article = cur.fetchone()
+    article = Article.query.filter_by(id=art_id).first()
     if article:
         return render_template("article.jinja2",article=article)
     return render_template("article_not_found.jinja2", art_id=art_id)
@@ -79,13 +85,11 @@ def view_article(art_id):
 def view_article_editor(art_id):
     if "logged" not in session:
         return redirect(url_for("view_login"))
-    db = get_db()
-    cur = db.execute("SELECT * FROM articles WHERE id=(?)", [art_id])
-    article = cur.fetchone()
+    article = Article.query.filter_by(id=art_id).first()
     if article:
         form = ArticleForm()
-        form.title.data = article["title"]
-        form.content.data = article["content"]
+        form.title.data = article.title
+        form.content.data = article.content
         return render_template("article_editor.jinja2", form=form, article=article)
 
     return render_template("article_not_found.jinja2")
@@ -94,16 +98,14 @@ def view_article_editor(art_id):
 def edit_article(art_id):
     if "logged" not in session:
         return redirect(url_for("view_login"))
-    db = get_db()
-    cur = db.execute("SELECT * FROM articles WHERE id=(?)", [art_id])
-    article = cur.fetchone()
+    article = Article.query.filter_by(id=art_id).first()
     if article:
         edit_form = ArticleForm(request.form)
         if edit_form.validate():
-            db.execute("update articles set title=?, content=? where id=? ",[
-                edit_form.title.data, edit_form.content.data, art_id
-            ])
-            db.commit()
+            article.title = edit_form.title.data
+            article.content = edit_form.content.data
+            db.session.add(article)
+            db.session.commit()
             flash("Edit saved","success")
             return redirect(url_for("view_article", art_id=art_id))
         else:
@@ -149,26 +151,8 @@ def logout_user():
     return redirect(url_for("view_welcome_page"))
 
 
-##UTILS
-
-def connect_db():
-    rv = sqlite3.connect(flask_app.config["DATABASE"])
-    rv.row_factory = sqlite3.Row
-    return rv
-
-def get_db():
-    if not hasattr(g, "sqlite_db"):
-        g.sqlite_db = connect_db()
-    return g.sqlite_db
-
-@flask_app.teardown_appcontext
-def close_db(exception):
-    if hasattr(g,"sqlite_db"):
-        g.sqlite_db.close()
-
+##CLI COMMAND
 def init_db(app):
     with app.app_context():
-        db = get_db()
-        with open("mdblog/schema.sql", "r") as fp:
-            db.cursor().executescript(fp.read())
-        db.commit()
+        db.create_all()
+        print("daabase inicialized")
